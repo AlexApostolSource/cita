@@ -65,7 +65,7 @@
     border: 2px solid #ffc2d8; color: #5a2a3f; background: #fff; -webkit-appearance: none;
   }
   textarea:focus, input:focus { outline: none; border-color: #ff4d8d; }
-  .wa { background: #25d366; color: #fff; width: 100%; margin-top: 6px; }
+  .wa { background: #25d366; color: #fff; width: 100%; margin-top: 12px; font-size: 16px; padding: 12px; }
   .heart { position: fixed; top: -40px; font-size: 26px; pointer-events: none; animation: fall linear forwards; z-index: 0; }
   @keyframes fall { to { transform: translateY(110vh) rotate(360deg); opacity: .7; } }
 </style>
@@ -131,8 +131,9 @@
     <label for="nota">📝 Observaciones de la paciente (escríbeme algo 💌)</label>
     <textarea id="nota" rows="4" maxlength="500" placeholder="Alergias, peticiones, amenazas… lo que quieras 😏"></textarea>
   </div>
-  <p class="sub">Tratamiento obligatorio, no se aceptan bajas 😌<br>Mándamelo por aquí 👇</p>
-  <button class="wa" id="wa">Enviar por WhatsApp 💬</button>
+  <p class="sub" id="send-sub">Tratamiento obligatorio, no se aceptan bajas 😌</p>
+  <button class="primary" id="send">Enviar receta 💌</button>
+  <button class="wa" id="wa">O mándamelo por WhatsApp 💬</button>
   <button class="back" id="back-date">← Cambiar algo</button>
 </section>
 
@@ -140,6 +141,15 @@
   // ✏️ Personaliza aquí (opcional)
   const NOMBRE = "";              // p. ej. "Laura" → "Laura, ¿quieres tener una cita conmigo?"
   const MI_WHATSAPP = "";         // tu número con prefijo, sin + ni espacios, p. ej. "34600111222"
+  const NTFY_TOPIC = "cita-cf3508362228";  // canal de ntfy donde te llegan sus respuestas
+
+  // Te manda una notificación al móvil (app ntfy suscrita a NTFY_TOPIC)
+  function avisar(title, message, tags) {
+    return fetch("https://ntfy.sh/", {
+      method: "POST",
+      body: JSON.stringify({ topic: NTFY_TOPIC, title, message, tags, priority: 5 }),
+    }).then(r => r.ok).catch(() => false);
+  }
 
   const $ = s => document.querySelector(s);
   const show = id => { document.querySelectorAll('.screen').forEach(s => s.classList.remove('active')); $(id).classList.add('active'); window.scrollTo(0, 0); };
@@ -256,8 +266,24 @@
     $('#done-emoji').textContent = '💊' + document.querySelector('.card.sel').dataset.ic;
     lluviaCorazones(70);
     show('#s-done');
+    avisar("💘 ¡Ha dicho que SÍ!",
+      `Plan: ${plan}\nDía: ${fechaBonita()}\nHora: ${hora}\nIntentos de decir que no: ${intentos}`, ["heart"]);
   });
   $('#back-date').onclick = () => show('#s-date');
+  $('#send').addEventListener('click', async () => {
+    const btn = $('#send'), nota = $('#nota').value.trim();
+    btn.disabled = true; btn.textContent = 'Enviando… 🚑';
+    const ok = await avisar("📝 Te ha escrito",
+      `${nota || '(sin mensaje)'}\n\n— ${plan} · ${fechaBonita()} · ${hora}`, ["love_letter"]);
+    if (ok) {
+      btn.textContent = '¡Receta enviada! ✅';
+      $('#send-sub').textContent = 'Me ha llegado 😏 ¡Nos vemos pronto!';
+      lluviaCorazones(40);
+    } else {
+      btn.disabled = false; btn.textContent = 'Reintentar envío 💌';
+      $('#send-sub').textContent = 'Ups, falló la conexión. Prueba otra vez o mándamelo por WhatsApp 👇';
+    }
+  });
   $('#wa').addEventListener('click', () => {
     const nota = $('#nota').value.trim();
     const msg = `🩺 Receta aceptada: ¡sí quiero una cita contigo! 💖\nTratamiento: ${plan}\nDía: ${fechaBonita()}\nHora: ${hora}` + (nota ? `\n\n📝 ${nota}` : '');
