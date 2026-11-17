@@ -1,0 +1,287 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>Consulta urgente 🩺💌</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+  body {
+    font-family: "Trebuchet MS", system-ui, sans-serif;
+    min-height: 100vh; min-height: 100dvh;
+    background: linear-gradient(135deg, #ffd6e7 0%, #ffe9f1 50%, #fff3e6 100%);
+    color: #5a2a3f; overflow-x: hidden;
+    display: flex; flex-direction: column;
+    touch-action: manipulation; -webkit-text-size-adjust: 100%;
+    padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+  }
+  body.no-scroll { overflow: hidden; height: 100dvh; }
+  .screen { display: none; width: 100%; max-width: 480px; margin: auto; padding: 24px 18px; text-align: center; animation: pop .45s ease; }
+  .screen.active { display: block; }
+  @keyframes pop { from { opacity: 0; transform: scale(.9) translateY(10px); } to { opacity: 1; transform: none; } }
+  .emoji { font-size: clamp(54px, 16vw, 72px); display: block; margin-bottom: 12px; animation: bounce 1.6s infinite; }
+  @keyframes bounce { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-10px); } }
+  h1 { font-size: clamp(24px, 7vw, 30px); line-height: 1.2; margin-bottom: 10px; }
+  p.sub { font-size: clamp(15px, 4.4vw, 17px); line-height: 1.4; opacity: .8; margin-bottom: 26px; min-height: 24px; }
+  .btns { display: flex; gap: 16px; justify-content: center; align-items: center; min-height: 80px; }
+  button {
+    -webkit-user-select: none; user-select: none; touch-action: manipulation;
+    font: inherit; font-weight: bold; border: none; cursor: pointer; border-radius: 999px;
+    padding: 14px 32px; font-size: 18px; transition: transform .15s, background .2s;
+  }
+  button:active { transform: scale(.95); }
+  #yes { background: #ff4d8d; color: #fff; box-shadow: 0 6px 18px rgba(255,77,141,.4); transition: transform .25s, font-size .25s, padding .25s; }
+  #no { -webkit-touch-callout: none; background: #fff; color: #ff4d8d; border: 2px solid #ff4d8d; }
+  #no.runaway { position: fixed; z-index: 10; transition: left .2s, top .2s; }
+  .cards { display: grid; gap: 14px; margin-bottom: 22px; }
+  .card {
+    background: #fff; border-radius: 20px; padding: 18px; display: flex; align-items: center; gap: 16px;
+    text-align: left; cursor: pointer; border: 3px solid transparent; box-shadow: 0 4px 14px rgba(90,42,63,.08);
+    transition: transform .15s, border-color .2s;
+  }
+  @media (hover: hover) { .card:hover { transform: translateY(-2px); } }
+  .card:active { transform: scale(.98); }
+  .card.sel { border-color: #ff4d8d; background: #fff0f6; }
+  .card .ic { font-size: 40px; }
+  .card b { display: block; font-size: 19px; }
+  .card small { opacity: .7; font-size: 14px; }
+  .primary { background: #ff4d8d; color: #fff; width: 100%; }
+  .primary:disabled { background: #f3b5cb; cursor: not-allowed; }
+  .back { background: none; color: #5a2a3f; opacity: .6; font-size: 15px; margin-top: 8px; padding: 8px; }
+  .box { background: #fff; border-radius: 20px; padding: 18px; margin-bottom: 18px; box-shadow: 0 4px 14px rgba(90,42,63,.08); }
+  .box label { display: block; font-weight: bold; margin-bottom: 10px; text-align: left; }
+  input[type=date] {
+    -webkit-appearance: none; appearance: none; display: block; min-height: 52px; text-align: left;
+    width: 100%; font: inherit; font-size: 18px; padding: 12px; border-radius: 12px;
+    border: 2px solid #ffc2d8; color: #5a2a3f; background: #fff;
+  }
+  .times { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+  .chip { background: #fff0f6; color: #5a2a3f; padding: 12px 0; font-size: 15px; border-radius: 12px; border: 2px solid #ffc2d8; }
+  .chip.sel { background: #ff4d8d; color: #fff; border-color: #ff4d8d; }
+  .summary { font-size: 19px; line-height: 1.7; }
+  .summary b { color: #ff4d8d; }
+  textarea {
+    width: 100%; font: inherit; font-size: 16px; padding: 12px; border-radius: 12px; resize: vertical;
+    border: 2px solid #ffc2d8; color: #5a2a3f; background: #fff; -webkit-appearance: none;
+  }
+  textarea:focus, input:focus { outline: none; border-color: #ff4d8d; }
+  .wa { background: #25d366; color: #fff; width: 100%; margin-top: 6px; }
+  .heart { position: fixed; top: -40px; font-size: 26px; pointer-events: none; animation: fall linear forwards; z-index: 0; }
+  @keyframes fall { to { transform: translateY(110vh) rotate(360deg); opacity: .7; } }
+</style>
+</head>
+<body class="no-scroll">
+
+<!-- 1. La pregunta -->
+<section class="screen active" id="s-ask">
+  <span class="emoji" id="ask-emoji">🩺</span>
+  <h1 id="ask-title">¿Quieres tener una cita conmigo?</h1>
+  <p class="sub" id="ask-sub">Diagnóstico: síndrome agudo de ganas de verte 💓<br>Tratamiento recomendado: una cita</p>
+  <div class="btns">
+    <button id="yes">Sí 💖</button>
+    <button id="no">No</button>
+  </div>
+</section>
+
+<!-- 2. Elegir plan -->
+<section class="screen" id="s-plan">
+  <span class="emoji">🥰</span>
+  <h1>¡Paciente estable! 💓</h1>
+  <p class="sub">Ahora elige el tratamiento:</p>
+  <div class="cards">
+    <div class="card" data-plan="Ruta 🥾" data-ic="🥾">
+      <span class="ic">🥾</span>
+      <div><b>Ruta</b><small>Cardio suave, aire puro y vistas bonitas. Recomendado por 10 de 10 enfermeras</small></div>
+    </div>
+    <div class="card" data-plan="Cena fuera 🍝" data-ic="🍝">
+      <span class="ic">🍝</span>
+      <div><b>Cena fuera</b><small>Dosis alta de comida rica y vinito. Sin comer de pie en el control 😌</small></div>
+    </div>
+    <div class="card" data-plan="Peli en casa 🍿" data-ic="🍿">
+      <span class="ic">🍿</span>
+      <div><b>Peli en casa</b><small>Reposo absoluto en sofá, manta y palomitas. Ideal post-guardia</small></div>
+    </div>
+  </div>
+  <button class="primary" id="to-date" disabled>Siguiente →</button>
+</section>
+
+<!-- 3. Fecha y hora -->
+<section class="screen" id="s-date">
+  <span class="emoji">📅</span>
+  <h1>¿Cuándo libras? 🏥</h1>
+  <p class="sub" id="date-sub">Elige día y hora</p>
+  <div class="box">
+    <label for="date">Día (que no te toque turno 🙏)</label>
+    <input type="date" id="date">
+  </div>
+  <div class="box">
+    <label>Hora</label>
+    <div class="times" id="times"></div>
+  </div>
+  <button class="primary" id="to-done" disabled>¡Confirmar cita! 💘</button>
+  <button class="back" id="back-plan">← Cambiar plan</button>
+</section>
+
+<!-- 4. Confirmación -->
+<section class="screen" id="s-done">
+  <span class="emoji" id="done-emoji">💊</span>
+  <h1>Receta médica 📋</h1>
+  <div class="box summary" id="summary"></div>
+  <div class="box">
+    <label for="nota">📝 Observaciones de la paciente (escríbeme algo 💌)</label>
+    <textarea id="nota" rows="4" maxlength="500" placeholder="Alergias, peticiones, amenazas… lo que quieras 😏"></textarea>
+  </div>
+  <p class="sub">Tratamiento obligatorio, no se aceptan bajas 😌<br>Mándamelo por aquí 👇</p>
+  <button class="wa" id="wa">Enviar por WhatsApp 💬</button>
+  <button class="back" id="back-date">← Cambiar algo</button>
+</section>
+
+<script>
+  // ✏️ Personaliza aquí (opcional)
+  const NOMBRE = "";              // p. ej. "Laura" → "Laura, ¿quieres tener una cita conmigo?"
+  const MI_WHATSAPP = "";         // tu número con prefijo, sin + ni espacios, p. ej. "34600111222"
+
+  const $ = s => document.querySelector(s);
+  const show = id => { document.querySelectorAll('.screen').forEach(s => s.classList.remove('active')); $(id).classList.add('active'); window.scrollTo(0, 0); };
+  if (NOMBRE) $('#ask-title').textContent = `${NOMBRE}, ¿quieres tener una cita conmigo?`;
+
+  // --- Botón "No" que huye ---
+  const no = $('#no'), yes = $('#yes');
+  const frases = [
+    ["😳", "¿Segura? Creo que es el cansancio de la guardia"],
+    ["💉", "Ese botón requiere receta y no la tienes"],
+    ["📉", "Me está bajando la saturación… 87%"],
+    ["🚑", "Código rojo: corazón roto en el box 3"],
+    ["🩹", "No hay tirita para esto"],
+    ["😤", "Que no vas a pillarlo 😂"],
+    ["🫀", "Constantes: taquicárdico esperando tu sí"],
+    ["😏", "El médico de guardia dice que digas que sí"],
+  ];
+  let intentos = 0, yesScale = 1;
+  function huir(e) {
+    if (e) e.preventDefault();
+    const [emo, txt] = frases[intentos % frases.length];
+    $('#ask-emoji').textContent = emo;
+    $('#ask-sub').textContent = txt;
+    intentos++;
+    yesScale = Math.min(yesScale + 0.15, 2.2);
+    yes.style.transform = `scale(${yesScale})`;
+
+    const r = no.getBoundingClientRect();
+    if (!no.classList.contains('runaway')) {
+      no.style.left = r.left + 'px'; no.style.top = r.top + 'px';
+      no.classList.add('runaway');
+    }
+    const pad = 16;
+    const vw = window.visualViewport ? visualViewport.width : window.innerWidth;
+    const vh = window.visualViewport ? visualViewport.height : window.innerHeight;
+    const maxX = vw - r.width - pad, maxY = vh - r.height - pad - 40;
+    // que no tape el Sí ni la pregunta
+    const evitar = [[yes, 25 + yesScale * 30], [$('#ask-title'), 10], [$('#ask-sub'), 10]].map(([el, m]) => [el.getBoundingClientRect(), m]);
+    const choca = (x, y) => evitar.some(([q, m]) => x + r.width > q.left - m && x < q.right + m && y + r.height > q.top - m && y < q.bottom + m);
+    let x, y, tries = 0;
+    do {
+      x = pad + Math.random() * (maxX - pad);
+      y = pad + Math.random() * (maxY - pad);
+      tries++;
+    } while (tries < 60 && ((Math.abs(x - r.left) < 100 && Math.abs(y - r.top) < 70) || choca(x, y)));
+    no.style.left = x + 'px'; no.style.top = y + 'px';
+    if (intentos > 8) no.textContent = ["Nop", "Alta voluntaria", "😂", "Pillame"][intentos % 4];
+  }
+  // si gira el móvil, que el botón no se quede fuera de la pantalla
+  window.addEventListener('resize', () => {
+    if (!no.classList.contains('runaway')) return;
+    const r = no.getBoundingClientRect();
+    no.style.left = Math.min(r.left, innerWidth - r.width - 16) + 'px';
+    no.style.top = Math.min(r.top, innerHeight - r.height - 56) + 'px';
+  });
+  no.addEventListener('mouseenter', huir);
+  no.addEventListener('touchstart', huir, { passive: false });
+  no.addEventListener('click', huir);
+
+  yes.addEventListener('click', () => {
+    no.style.display = 'none';
+    document.body.classList.remove('no-scroll');
+    lluviaCorazones(40);
+    show('#s-plan');
+  });
+
+  // --- Elegir plan ---
+  let plan = null;
+  document.querySelectorAll('.card').forEach(c => c.addEventListener('click', () => {
+    document.querySelectorAll('.card').forEach(x => x.classList.remove('sel'));
+    c.classList.add('sel');
+    plan = c.dataset.plan;
+    $('#to-date').disabled = false;
+  }));
+  $('#to-date').addEventListener('click', () => {
+    $('#date-sub').textContent = `Tratamiento elegido: ${plan}`;
+    renderHoras();
+    show('#s-date');
+  });
+
+  // --- Fecha y hora ---
+  const hoy = new Date();
+  const iso = d => `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+  $('#date').min = iso(hoy);
+  const horasPorPlan = {
+    "Ruta 🥾": ["09:00","10:00","11:00","12:00","16:00","17:00","18:00","19:00"],
+    "Cena fuera 🍝": ["19:30","20:00","20:30","21:00","21:30","22:00","22:30","23:00"],
+    "Peli en casa 🍿": ["17:00","18:00","19:00","20:00","21:00","21:30","22:00","22:30"],
+  };
+  let fecha = null, hora = null;
+  function renderHoras() {
+    hora = null;
+    const cont = $('#times'); cont.innerHTML = '';
+    horasPorPlan[plan].forEach(h => {
+      const b = document.createElement('button');
+      b.className = 'chip'; b.textContent = h;
+      b.onclick = () => { cont.querySelectorAll('.chip').forEach(x => x.classList.remove('sel')); b.classList.add('sel'); hora = h; check(); };
+      cont.appendChild(b);
+    });
+    check();
+  }
+  $('#date').addEventListener('change', e => { fecha = e.target.value; check(); });
+  const check = () => $('#to-done').disabled = !(fecha && hora);
+  $('#back-plan').onclick = () => show('#s-plan');
+
+  // --- Confirmación ---
+  function fechaBonita() {
+    const [y, m, d] = fecha.split('-').map(Number);
+    const s = new Date(y, m - 1, d).toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long' });
+    return s.charAt(0).toUpperCase() + s.slice(1);
+  }
+  $('#to-done').addEventListener('click', () => {
+    $('#summary').innerHTML = `💊 Tratamiento: <b>${plan}</b><br>📅 Día: <b>${fechaBonita()}</b><br>⏰ Hora: <b>${hora}</b><br>🔁 Posología: <b>repetir según evolución</b>`;
+    $('#done-emoji').textContent = '💊' + document.querySelector('.card.sel').dataset.ic;
+    lluviaCorazones(70);
+    show('#s-done');
+  });
+  $('#back-date').onclick = () => show('#s-date');
+  $('#wa').addEventListener('click', () => {
+    const nota = $('#nota').value.trim();
+    const msg = `🩺 Receta aceptada: ¡sí quiero una cita contigo! 💖\nTratamiento: ${plan}\nDía: ${fechaBonita()}\nHora: ${hora}` + (nota ? `\n\n📝 ${nota}` : '');
+    const url = (MI_WHATSAPP ? `https://wa.me/${MI_WHATSAPP}` : `https://wa.me/`) + `?text=${encodeURIComponent(msg)}`;
+    // en móvil abre la app de WhatsApp directamente
+    if (!window.open(url, '_blank')) location.href = url;
+  });
+
+  // --- Corazones ---
+  function lluviaCorazones(n) {
+    const emojis = ["💖","💕","💘","❤️","🩺","💊","🩹","✨"];
+    for (let i = 0; i < n; i++) {
+      setTimeout(() => {
+        const h = document.createElement('div');
+        h.className = 'heart';
+        h.textContent = emojis[Math.floor(Math.random() * emojis.length)];
+        h.style.left = Math.random() * 100 + 'vw';
+        h.style.fontSize = (18 + Math.random() * 22) + 'px';
+        h.style.animationDuration = (2.5 + Math.random() * 2.5) + 's';
+        document.body.appendChild(h);
+        setTimeout(() => h.remove(), 5500);
+      }, i * 60);
+    }
+  }
+</script>
+</body>
+</html>
